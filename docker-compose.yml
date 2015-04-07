@@ -1,0 +1,16 @@
+redis:
+	image: redis
+
+sql:
+	image: sql
+
+chall-srv:
+	build: chall-srv/
+	links:
+	 - sql
+
+requester:
+	build: requester/
+	links:
+	 - redis
+	 - sql

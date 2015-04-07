@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net"
+	"net/http"
 	"crypto/tls"
 	"crypto/rand"
 	"crypto/rsa"
@@ -13,20 +14,20 @@ import (
 	"time"
 )
 
-func genSingleSelfSigned(sni []string) (cert *tls.Certificate) {
+func genSelfSigned(dnsNames []string) (cert *tls.Certificate) {
 	template := &x509.Certificate{
 		SerialNumber: big.NewInt(1337),
 		Subject: pkix.Name{
 			Organization: []string{"wile e coyote llc"},
 		},
 		NotBefore: time.Now(),
-		NotAfter: time.Now().AddDate(0, 0, 15),
+		NotAfter: time.Now().AddDate(0, 0, 1),
 
 		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth, x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
 
-		DNSNames: sni,
+		DNSNames: dnsNames,
 	}
 	
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -58,51 +59,37 @@ func getCert(clientHello *tls.ClientHelloInfo) (cert *tls.Certificate, err error
 		domain := "example.com"
 		dnsNames = append(dnsNames, domain)
 	}
-	// should also get public key for the realy domain (+with a else here!)
+	// should also get public key for the real domain (+with a else here! or something)
 
-	cert = genSingleSelfSigned(dnsNames)
+	cert = genSelfSigned(dnsNames)
 	return
 }
 
-func main() {
-	ln, err := net.Listen("tcp", ":443")
+func listenAndMeepMeep(srv *http.Server) error {
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{*genSelfSigned([]string{"null"})}, // because servers require at least one...
+		ClientAuth: tls.NoClientCert,
+		GetCertificate: getCert,
+		NextProtos: []string{"http/1.1"},
+	}
+
+	conn, err := net.Listen("tcp", srv.Addr)
 	if err != nil {
-		fmt.Println("couldn't listen wut", err)
-		return
+		fmt.Println("couldn't listen", err)
 	}
-	for {
-		c, err := ln.Accept()
-		if err != nil {
-			fmt.Println("couldn't accept new connection", err)
-			return
-		}
-		defer c.Close()
-		go func(c net.Conn) {
-			tlsConfig := tls.Config{
-				Certificates: []tls.Certificate{*genSingleSelfSigned([]string{"null"})}, // because servers require at least one...
-				ClientAuth: tls.NoClientCert,
-				GetCertificate: getCert,
-			}
-			tlsServer := tls.Server(c, &tlsConfig)
 
-			err = tlsServer.Handshake()
-			if err != nil {
-				fmt.Println("hm", err)
-				return
-			}
+	tlsListener := tls.NewListener(conn, tlsConfig)
+	return srv.Serve(tlsListener)
+}
 
-			var stuff []byte
-			_, err = tlsServer.Read(stuff)
-			if err != nil {
-				fmt.Println("couldnt read!", err)
-				return
-			}
-			fmt.Println(string(stuff))
+func handler(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write([]byte("This is an example server.\n"))
+}
 
-			tlsServer.Write([]byte("derpderp"))
+func main() {
+	http.HandleFunc("/", handler)
 
-			tlsServer.Close()
-			return
-		}(c)
-	}
+	httpsServer := &http.Server{Addr: ":443"}
+	listenAndMeepMeep(httpsServer)
 }
