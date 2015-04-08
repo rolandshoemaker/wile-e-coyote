@@ -132,7 +132,7 @@ For talking to `boulder-wfe`...
 
 #### *Test chains*
 
-a *test chain* is a complete set of http requests/responses that constitute a single action (i.e. new registration, new authorization etc). each chain should be a method returning a `chainResult` struct containing either the measured metrics or information about an error that occurred that can then be logged in whatever way... (need to come up with this...) Each test chain should be a single file in `requester/chains/` and expose a single public method `...Chain` with `package chains`. (various utility methods are provided in `chains/common.go`)
+a *test chain* is a complete set of http requests/responses that constitute a single action (i.e. new registration, new authorization etc). each chain should be a method returning a `chainResult` struct containing either the measured metrics or information about an error that occurred that can then be logged in whatever way... (need to come up with this...) Each test chain should be in `requester/chains/` and expose a public method `...Chain` in `package chains`. (various utility methods are provided in `chains/common.go`)
 
 * NewRegistrationChain
 ```
@@ -169,6 +169,8 @@ Should have a basic JS frontend to display charts (i.e. RPS / Avg. resp time vs.
 Something like this would be super pretty/awesome...
 
 ![](http://urbanairship.com/images/uploads/blog/Screen_Shot_2014-07-11_at_11.57.31_AM.png)
+
+Should probably be able to start/stop/adjust load testing through the web interface as well... (i.e. change number of goroutines executing test chains)
 
 ##### Metrics
 
