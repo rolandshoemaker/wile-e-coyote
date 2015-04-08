@@ -108,28 +108,6 @@ For talking to `boulder-wfe`...
 * [goreq](https://github.com/franela/goreq)
 * [gorilla/http](http://www.gorillatoolkit.org/pkg/http)
 
-#### Context-based chain execution
-
-`wec-requester` should randomly pick a test chain to run based on what is available from the SQL db, like so (also there should be settable hard limits for each regs, authz, certs at which the test chains which generate them should no longer be run)
-
-`CHECK: seemingly only certificates can be deleted? (i.e. not authorizations or registrations...)`
-
-* No registrations
-  * run `NewRegistrationChain`
-* Registrations
-  * run `NewRegistrationChain`
-  * run `NewAuthorizationChain`
-* Registrations + Authorizations
-  * run `NewRegistrationChain`
-  * run `NewAuthorizationChain`
-  * run `NewCertificateChain`
-* Registrations + Authorizations + Certificates
-  * run `NewRegistrationChain`
-  * run `NewAuthorizationChain`
-  * run `NewCertificateChain`
-  * run `RefreshCertificateChain`
-  * run `RevokeCertificateChain`
-
 #### *Test chains*
 
 a *test chain* is a complete set of http requests/responses that constitute a single action (i.e. new registration, new authorization etc). each chain should be a method returning a `chainResult` struct containing either the measured metrics or information about an error that occurred that can then be logged in whatever way... (need to come up with this...) Each test chain should be in `requester/chains/` and expose a public method `...Chain` in `package chains`. (various utility methods are provided in `chains/common.go`)
@@ -147,6 +125,34 @@ POST         -> /acme/authz/asdf/0 (path+token)
 GET [poll]   -> /acme/authz/asdf
 SQL [auths]  <- add authorization information (priv key and such)
 ```
+
+As well as good test chains there should be *chaotic* test chains that try to do something wrong and make sure that `boulder` catches it, fails, and responds in the correct way in order to properly exercise the entire codebase.
+
+#### Context-based chain execution
+
+`wec-requester` should randomly pick a test chain to run based on what is available from the SQL db, like so (also there should be settable hard limits for each regs, authz, certs at which the test chains which generate them should no longer be run)
+
+`CHECK: seemingly only certificates can be deleted? (i.e. not authorizations or registrations...)`
+
+* No registrations
+  * run `NewRegistrationChain`
+  * run a random `...ChaosChain`
+* Registrations
+  * run `NewRegistrationChain`
+  * run `NewAuthorizationChain`
+  * run a random `...ChaosChain`
+* Registrations + Authorizations
+  * run `NewRegistrationChain`
+  * run `NewAuthorizationChain`
+  * run `NewCertificateChain`
+  * run a random `...ChaosChain`
+* Registrations + Authorizations + Certificates
+  * run `NewRegistrationChain`
+  * run `NewAuthorizationChain`
+  * run `NewCertificateChain`
+  * run `RefreshCertificateChain`
+  * run `RevokeCertificateChain`
+  * run a random `...ChaosChain`
 
 etc etc etc...
 
@@ -177,6 +183,12 @@ Should probably be able to start/stop/adjust load testing through the web interf
 * RPS
 * (total) Avg. resp time
 * Avg. resp time by test chain
+* Avg. resp time by endpoint
+* Num goroutines executing chains
+* Num SQL records for regs, authz, certs
+* Num Redis keys
+* Avg. Redis key age (how long are challenges waiting to be requested, same as NewAuth poll period...)
+* Charts of individual test chains (scatter plot resp time vs. time for multiple results of same chain, color results by position in chain, 1:red 2:blue ...)
 
 #### Results
 
@@ -200,7 +212,7 @@ type chainResult struct {
 
 #### Logging format
 
-`wec-analytics` should generate some log file that will be passed to the Docker host when everything shutdown (or something), containing all of the `chainResults` that were passed to it. This file should probably be in JSON, although if it's going to get REALLY big (like millions of requests) we may want to use a binary logging format...? (in this  case we would then need another tool to extract/convert/whatever the log file afterwards.
+`wec-analytics` should generate some log file that will be passed to the Docker host when everything shuts down (or something...), containing all of the `chainResults` that were passed to it. This file should probably be in JSON, although if it's going to get REALLY big (like millions of requests) we may want to use a binary logging format...? (in this  case we would then need another tool to extract/convert/whatever the log file afterwards.
 
 ## Docker
 
