@@ -39,7 +39,7 @@
                                                                 
 ```
 
-<div style="text-align:center"><img src ="http://media.giphy.com/media/52kICijFBOkOQ/giphy.gif" /></div>
+<div style="text-align:center;margin:0 auto;"><img src ="http://media.giphy.com/media/52kICijFBOkOQ/giphy.gif" /></div>
 
 [Docker compose](http://docs.docker.com/compose/)+Go based context-aware testing framework. Implements multiple *test chains* which can be run concurrently to gather performance metrics about the `boulder` ACME server.
 
