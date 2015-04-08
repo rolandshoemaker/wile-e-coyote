@@ -7,7 +7,7 @@ sql:
 chall-srv:
 	build: chall-srv/
 	links:
-	 - sql
+	 - redis
 
 requester:
 	build: requester/
