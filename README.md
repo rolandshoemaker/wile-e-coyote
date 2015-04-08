@@ -47,6 +47,25 @@
 * `wec-analytics` (in `analytics/`) - **WIP** (pretty much all the infrastructure needs to be written)
 * `wec-challenge-server` (in `chall-srv/`) - **Pretty much done**
 
+## Contents
+
+* [Design](#design)
+  * [Main components](#main-components)
+  * [`wec-requester`](#wec-requester)
+    * [Control](#control)
+    * [Storage](#storage)
+    * [Possible http libs](#possible-http-libs)
+    * [Context-based chain execution](#context-based-chain-execution)
+    * [*Test chains*](#*test-chains*)
+  * [`wec-challenge-server`](#wec-challenge-server)
+  * [`wec-analytics`](#wec-analytics)
+    * [Interface](#interface)
+      * [Metrics](#metrics)
+    * [Results](#results)
+    * [Logging format](#logging-format)
+* [Docker](#docker)
+* [Useful references](#useful-references)
+
 ## Design
 
 [Docker compose](http://docs.docker.com/compose/)+Go based context-aware load testing framework for the `boulder` CA server infrastructure.
