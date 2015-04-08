@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/hex"
-	// "encoding/pem"
 	"fmt"
 	"net"
 	"net/http"
@@ -103,21 +102,6 @@ func getPubKey(dnsName string, rConn redis.Conn) (pubKey *rsa.PublicKey, err err
 	return
 }
 
-func setPubKey(dnsName string, pubKey *rsa.PublicKey, rConn redis.Conn) error {
-	rKey := fmt.Sprintf("pk:%s", dnsName)
-	pubBytes, err := x509.MarshalPKIXPublicKey(pubKey)
-
-	ok, err := redis.Bool(rConn.Do("SET", rKey, pubBytes))
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return err
-	}
-
-	return nil
-}
-
 // creates the right certificate with relevant DNS names and public key based on provided ServerName
 // (from SNI).
 func getCert(clientHello *tls.ClientHelloInfo) (cert *tls.Certificate, err error) {
@@ -163,6 +147,7 @@ func getCert(clientHello *tls.ClientHelloInfo) (cert *tls.Certificate, err error
 		if err != nil {
 			return
 		}
+		
 		dnsNames = append(dnsNames, domain, zName)
 	} else {
 		dnsNames = []string{clientHello.ServerName}

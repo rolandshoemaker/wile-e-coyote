@@ -1,72 +1,112 @@
-<p align="center"><img src="http://media.giphy.com/media/52kICijFBOkOQ/giphy.gif" /></p>
+# `wile-e-coyote`
+
+<p align="center"><img src="http://media.giphy.com/media/52kICijFBOkOQ/giphy.gif" /><br>...but with <b>LOTS OF STICKS</b></p>
 
 ```
-                                                                
-                                                                
-                            wile e coyote                       
-                            ■───────────■                       
-                             load tester                        
-                                                                
-        monolithic client or                                    
-      individual containers +                                   
-         rabbitmq container                                     
-                                                                
-                         ┌───────┐           
-                         │boulder◀────┐         
-                         └───▲───┘    │        
-                             │        │        
-                             │        │                         
-                             │        │     ┌─────────┐         
-         JSON   ◀──┐         │        └─────▶ssl proxy│         
-       log file    │         │              └────▲────┘         
-                   │         │                   │              
-           │       │         │                   │              
-           │       │   ┌─────▼───────┐    ┌──────▼─────────────┐
-           │       └───┤wec-requester│    │wec-challenge-server│
-           │           └─▲─────▲─────┘    └───────▲────────────┘
-           │                   │                  │             
-           │             │     │   ┌─────────┐    │             
-           │                   └───▶sql/redis◀────┘             
-           │   ─ ─ ─ ─ ─ ┘         └─────────┘                  
-           │  │     web ui for                                  
-           │    control/live stats?                             
-           │  │                                                 
-           │                                                    
-         ┌─▼──▼─────────┐                                       
-         │analytics tool│                                       
-         └──────────────┘                                       
-       charts with avg. resp timing per test chain              
-       (plus other aggregate information like num               
-       users, authorizations, certs, errors etc)                
+                                                                     
+                                                                     
+                             load tester                             
+                            ■───────────■                            
+                                                                     
+                                                                     
+                   monolithic client or                              
+                 individual containers +                             
+                    rabbitmq container                               
+                                                                     
+                         ┌───────┐         ┌───────┐                 
+                         │boulder◀───┬ ─ ─ ▶dnsmasq│                 
+                         └───▲───┘   │     └───────┘                 
+                             │       │  A IN *. -> challenge             
+                             │       │        server                 
+                             │       │                               
+                             │       │                               
+                             │       └────────┐                      
+                             │                │                      
+                             │                │                      
+                       ┌─────▼───────┐    ┌───▼────────────────┐     
+                       │wec-requester│    │wec-challenge-server│     
+                       └─▲─────▲─────┘    └───────▲────────────┘     
+      RPC for passing          │                  │                  
+     results to logger?  │     │   ┌─────────┐    │                  
+                               └───▶sql/redis◀────┘                  
+               ─ ─ ─ ─ ─ ┘         └─────────┘                       
+              │     web ui for                                       
+                control/live stats?                                  
+              │                                                      
+                                                                     
+         ┌────▼─────────────┐ charts with avg. resp timing per test chain
+         │wec-analytics tool│ (plus other aggregate information like num 
+         └──────────────────┘ users, authorizations, certs, errors etc)  
+                                                                     
                                                                 
 ```
 
-[Docker compose](http://docs.docker.com/compose/)+Go based context-aware testing framework. Implements multiple *test chains* which can be run concurrently to gather performance metrics about the `boulder` ACME server.
+[Docker compose](http://docs.docker.com/compose/)+Go based context-aware load testing framework for the `boulder` CA server infrastructure.
 
-Consisting of two main parts and a whole bunch of aux services.
 
-### main components
-* `wec-requester` - executes *test chains* as goroutines, each of which makes a series of requests to the `boulder` server, they may or may not store information in an `sql` db, or a `redis` keystore to prevent overlap or facilitate challenge completion
-* `wec-challenge-server` - a basic http server sitting behind a ssl proxy which will automatically generate self-signed certificates required for `simpleHTTPS` challenges and serve challenge tokens from the db based on the domain in the request
+### Main components
 
-### aux components
+* `wec-requester` - executes *test chains* as goroutines, each of which makes a series of requests to the `boulder` server, they may or may not retrieve/store information from/in an SQL db, or a `redis` keystore to prevent overlap or facilitate challenge completion where SQL has too much overhead.
+* `wec-challenge-server` - listens for TLS connections and automatically generates self-signed certificates and responses to satisfy ACME challenges using information from SQL.
+* `wec-analytics tool` - accepts `chainResult`s (and probably other stuff.. `debugResult`?) *probably* via RPC a call, logs them to a file (either JSON or binary for lots of stuff), and also serves a basic webpage displaying metric charts (preeeetty).
 
-* *ssl proxy* - sits between `boulder` and `wec-challenge-server` and automatically generates self-signed SSL certs for EVERYTHING
-* *sql* / *redis* - `sql` for the registration, authorization, and certificate information, and `redis` for things we are currently working on so other goroutines know to leave us alone. (i.e. don't try to revoke a cert while we are renewing it elsewhere or try to create an authorization for a domain that already exists) `<-` although it should also throw weird stuff at the server as well (prob specific *bad test chains*) for proper load testing...
+### `wec-requester`
 
-### test framework
+Most(/all) of the request `struct`s and JWS/JWK signing methods are already done in `boulder` as well as a whole bunch of super useful utility functions so no need to reinvent the wheel on those fronts.
 
-a lot of the annoying stuff we need (JWK, JWS, various marshalable request structs, etcetc) already exist in `boulder` so we can just import a lot of that stuff directly.
+#### Context-based chain execution
 
-which tests are executed should be based on what is in the `sql` db, e.g. if we have no regs run new-registration, if we have registrations run new-registration and new-authorization, if we have registrations and authorizations run new-registration, new-authorization, and new-certificate etc etc etc...
+`wec-requester` should randomly pick a test chain to run based on what is available from the SQL db, like so (also there should be settable hard limits for each regs, authz, certs at which the test chains which generate them should no longer be run)
 
-#### possible http libs
+`CHECK: seemingly only certificates can be deleted? (i.e. not authorizations or registrations...)`
 
-* native (bit too low level to write quickly)
+* No registrations
+  * run `newRegistrationChain`
+* Registrations
+  * run `newRegistrationChain`
+  * run `newAuthorizationChain`
+* Registrations + Authorizations
+  * run `newRegistrationChain`
+  * run `newAuthorizationChain`
+  * run `newCertificateChain`
+* Registrations + Authorizations + Certificates
+  * run `newRegistrationChain`
+  * run `newAuthorizationChain`
+  * run `newCertificateChain`
+  * run `refreshCertificateChain`
+  * run `revokeCertificateChain`
+
+#### Possible http libs
+
+For talking to `boulder-wfe`...
+
+* native [net/http](https://godoc.org/net/http) (bit too low level to write quickly, or am I just being lazy...?)
 * [goreq](https://github.com/franela/goreq)
 * [gorilla/http](http://www.gorillatoolkit.org/pkg/http)
 
-#### logging
+#### *Test chains*
+
+a *test chain* is a complete set of http requests/responses that constitute a single action (i.e. new registration, new authorization etc). each chain should be a method returning a `chainResult` struct containing either the measured metrics or information about an error that occurred that can then be logged in whatever way... (need to come up with this...)
+
+* newRegistrationChain
+```
+POST        -> /acme/new-reg
+SQL [regs]  <- add registration information
+```
+* newAuthorizationChain
+```
+POST         -> /acme/new-authorization
+SQL [challs] <- add simpleHTTPs path/token (/other challenges...)
+POST         -> /acme/authz/asdf/0 (path+token)
+GET [poll]   -> /acme/authz/asdf
+SQL [auths]  <- add authorization information (priv key and such)
+```
+
+etc etc etc...
+
+### Logging
+
+RPC calls from `wec-requester` to `logger`(?) which provides a new `requestResult` struct?
 
 ```
 type requestResult struct {
@@ -83,32 +123,8 @@ type chainResult struct {
     IndividualResults []requestResult `json:"individualresults,omitempty"` // individual requestResults
 }
 ```
-### *test chains*
 
-a *test chain* is a complete set of http requests/responses that constitute a single action (i.e. new registration, new authorization etc). each chain should be a method returning a `chainResult` struct containing either the measured metrics or information about an error that occurred that can then be logged in whatever way... (need to come up with this...)
+## Useful references
 
-* new registration
-```
-POST        -> /acme/new-reg
-SQL [regs]  <- add registration information
-```
-* new-authorization
-```
-POST         -> /acme/new-authorization
-SQL [challs] <- add simpleHTTPs path/token (/other challenges...)
-POST         -> /acme/authz/asdf/0 (path+token)
-GET [poll]   -> /acme/authz/asdf
-SQL [auths]  <- add authorization information
-```
-
-### transparent ssl proxy (`squid`)
-
-    openssl genrsa -out squid.key 2048
-    openssl req -new -key squid.key -out squid.csr
-    openssl x509 -req -days 3650 -in squid.csr -signkey squid.key -out squid.crt
-    cat squid.key squid.crt > squid.pem
-
-## useful links
-
-* [live stats collection](http://nf.id.au/posts/2011/03/collecting-and-plotting-live-data-with-golang.html)
+* [live stats collection](http://nf.id.au/posts/2011/03/collecting-and-plotting-live-data-with-golang.html) - idea for logger...?
 
