@@ -122,8 +122,8 @@ func getCert(clientHello *tls.ClientHelloInfo) (cert *tls.Certificate, err error
 			return
 		}
 
-		//assume packed is in form 'dnsName:r:s:pubKey'
-		unpacked := strings.SplitN(packed, ":", 4)
+		//assume packed is in form 'dnsName:r:s'
+		unpacked := strings.SplitN(packed, ":", 3)
 		if len(unpacked) < 4 {
 			err = fmt.Errorf("Value for key [%s] in incorrect format [%s]", nonce, packed)
 			return
