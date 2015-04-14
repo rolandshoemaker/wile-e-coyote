@@ -4,6 +4,7 @@ import  (
 	"crypto/rsa"
 	"crypto/x509"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"github.com/garyburd/redigo/redis"
@@ -24,24 +25,51 @@ type ChainResult struct {
 }
 
 type testChain struct {
-	testFunc     func() ChainResult
-	requirements []string
+	TestFunc     func() ChainResult
+	Requirements []string
 }
 
-var TestChains []testChain = []testChain{testChain{testFunc: func() ChainResult {return ChainResult{}}, requirements: []string{"woop"}}}
+var TestChains []testChain = []testChain{
+	TestChain{testFunc: NewRegistrationTestChain, Requirements: []string{}},
+	TestChain{testFunc: NewAuthorizationTestChain, Requirements: []string{"registration"}},
+	TestChain{testFunc: NewCertificateTestChain, Requirements: []string{"registration", "authorization"}},
+	TestChain{testFunc: RevokeCertificateTestChain, Requirements: []string{"registration", "authorization", "certificate"}},
+}
 
 // public functions
 
-// return a *random* test chain from TestChains that
+// return a *random* (ish) test chain from TestChains that
 // satifies testChain.requirements (based on whats in SQL)
 func GetChain() func() ChainResult {
-	return TestChains[0].testFunc
+	var randChain testChain
+	for {
+		randChain = TestChains[rand.Intn(len(TestChains)-1)]
+		if satisfiesRequirements(randChain) {
+			break
+		}
+	}
+	return randChain.TestFunc
 }
 
 // internal stuff
 
-func satifiesRequirements() bool {
-	return true
+func satisfiesRequirements(c ChainResult) bool {
+	satisfied := true
+	for _, req := range c.Requirements {
+		if !satisfied {
+			break
+		}
+		switch req {
+		case "registration":
+
+		case "authorization":
+
+		case "certificate":
+
+		}
+	}
+
+	return satisfied
 }
 
 // utility functions

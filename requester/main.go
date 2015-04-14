@@ -21,7 +21,10 @@ func attacker(closeChan chan bool) {
 		default:
 			testChain := chains.GetChain()
 			chainResult := testChain()
-			results = append(results, chainResult)
+			// if empty result wasnt passed...
+			if chainResult != ChainResult{} {
+				results = append(results, chainResult)
+			}
 		}
 	}
 }
