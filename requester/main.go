@@ -44,7 +44,9 @@ func monitorHerd(alive []chan bool) []chan bool {
 			// idk why randomly...
 			rand.Seed(time.Now().Unix())
 			for i := 0; i < (numAlive-numAttackers); i++ {
-				randCloseChan := alive[rand.Intn(numAlive-1)]
+				randInt := rand.Intn(numAlive-1)
+				randCloseChan := alive[randInt]
+				alive = append(alive[:randInt], alive[randInt+1:]...)
 				randCloseChan <- true
 			}
 		} else {
