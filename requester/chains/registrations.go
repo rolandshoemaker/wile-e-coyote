@@ -1,7 +1,7 @@
 package chains
 
-func NewRegistrationTestChain() cR ChainResult {
-	cr := ChainResult{ChainName: "new registration"}
+func NewRegistrationTestChain(chainContext) (ChainResult, chainContext) {
+	cR := ChainResult{ChainName: "new registration"}
 
-	return
+	return cR
 }

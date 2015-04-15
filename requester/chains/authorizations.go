@@ -1,7 +1,7 @@
 package chains
 
-func NewAuthorizationTestChain() cR ChainResult {
-	cr := ChainResult{ChainName: "new authorization"}
+func NewAuthorizationTestChain(chainContext) (ChainResult, chainContext) {
+	cR := ChainResult{ChainName: "new authorization"}
 
-	return
+	return cR
 }

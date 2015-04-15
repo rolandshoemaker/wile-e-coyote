@@ -19,12 +19,16 @@ func attacker(closeChan chan bool) {
 			// goodbye cruel world
 			break
 		default:
-			testChain := chains.GetChain()
-			chainResult := testChain()
+			testChain, cC := chains.GetChain()
+			chainResult, newContext := testChain(cC)
 			// if empty result wasnt passed...
 			if chainResult != ChainResult{} {
 				results = append(results, chainResult)
 			}
+			if cC != newContext {
+				chain.updateContext(cC, newContext)
+			}
+			chain.SendStats(chainResult)
 		}
 	}
 }
@@ -46,7 +50,7 @@ func monitorHerd(alive []chan bool) []chan bool {
 			for i := 0; i < (numAlive-numAttackers); i++ {
 				randInt := rand.Intn(numAlive-1)
 				randCloseChan := alive[randInt]
-				alive = append(alive[:randInt], alive[randInt+1:]...)
+				alive = append(alive[:randInt], alive[randInt +1:]...)
 				randCloseChan <- true
 			}
 		} else {

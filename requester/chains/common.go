@@ -24,41 +24,62 @@ type ChainResult struct {
     IndividualResults []requestResult `json:"individualresults,omitempty"` // individual requestResults
 }
 
+type chainContext struct {
+	Registrations  []string
+	Authorizations []string
+	Certificates   []string
+}
+
 type testChain struct {
-	TestFunc     func() ChainResult
+	TestFunc     func(chainContext) (ChainResult, chainContext)
 	Requirements []string
 }
 
 var TestChains []testChain = []testChain{
-	TestChain{testFunc: NewRegistrationTestChain, Requirements: []string{}},
-	TestChain{testFunc: NewAuthorizationTestChain, Requirements: []string{"registration"}},
-	TestChain{testFunc: NewCertificateTestChain, Requirements: []string{"registration", "authorization"}},
-	TestChain{testFunc: RevokeCertificateTestChain, Requirements: []string{"registration", "authorization", "certificate"}},
+	testChain{TestFunc: NewRegistrationTestChain, Requirements: []string{}},
+	testChain{TestFunc: NewAuthorizationTestChain, Requirements: []string{"registration"}},
+	testChain{TestFunc: NewCertificateTestChain, Requirements: []string{"registration", "authorization"}},
+	testChain{TestFunc: RevokeCertificateTestChain, Requirements: []string{"registration", "certificate"}},
 }
 
 // public functions
 
 // return a *random* (ish) test chain from TestChains that
 // satifies testChain.requirements (based on whats in SQL)
-func GetChain() func() ChainResult {
+func GetChain() func(chainContext) (ChainResult, chainContext) {
 	var randChain testChain
 	for {
 		randChain = TestChains[rand.Intn(len(TestChains)-1)]
-		if satisfiesRequirements(randChain) {
+		cC := getRequirements(randChain.Requirements)
+		if cC != nil {
 			break
 		}
 	}
-	return randChain.TestFunc
+	return randChain.TestFunc, cC
+}
+
+func UpdateContext(oldContext, newContext chainContext) {
+	// figure out whats been added / removed (map approach?)
+	// and update SQL to reflect that
+	if oldContext.Requirements != newContext.Requirements {
+
+	}
+	if oldContext.Authorizations != newContext.Authorizations {
+
+	}
+	if oldContext.Certificates != newContext.Certificates {
+
+	}
+}
+
+func SendStats(result ChainResult) {
+
 }
 
 // internal stuff
 
-func satisfiesRequirements(c ChainResult) bool {
-	satisfied := true
-	for _, req := range c.Requirements {
-		if !satisfied {
-			break
-		}
+func getRequirements(reqs []string) (cC chainContext) {
+	for _, req := range reqs {
 		switch req {
 		case "registration":
 
@@ -69,7 +90,7 @@ func satisfiesRequirements(c ChainResult) bool {
 		}
 	}
 
-	return satisfied
+	return
 }
 
 // utility functions
