@@ -110,8 +110,19 @@ func setRedisPubKey(dnsName string, pubKey *rsa.PublicKey, rConn redis.Conn) err
 	return nil
 }
 
-func timedPOST(url string, data interface{}) {
+func timedPOST(client, url string, data []byte]) {
+	sTime := time.Now()
+	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(data))
+	req.Header.Set("Content-Type", "application/json")
 
+	resp, err := client.Do(req)
+	if err != nil {
+
+	}
+	defer resp.Body.Close()
+
+	body, _ := ioutil.ReadAll(resp.Body)
+	return body, resp.Status, resp.Header, time.Since(sTime)
 }
 
 func timedGET(url string) {

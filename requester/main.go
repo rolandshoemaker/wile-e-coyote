@@ -8,7 +8,7 @@ import  (
 	"github.com/rolandshoemaker/wile-e-coyote/requester/chains"
 )
 
-var numAttackers int = 10
+var numAttackers int = 1
 var results []chains.ChainResult
 
 func attacker(closeChan chan bool) {
@@ -46,7 +46,7 @@ func monitorHerd(alive []chan bool) []chan bool {
 		if numAttackers < numAlive {
 			// randomly kill some attackers when they finish doing their thing...
 			// idk why randomly...
-			rand.Seed(time.Now().Unix())
+			rand.Seed(time.Now().UnixNano())
 			for i := 0; i < (numAlive-numAttackers); i++ {
 				randInt := rand.Intn(numAlive-1)
 				randCloseChan := alive[randInt]
