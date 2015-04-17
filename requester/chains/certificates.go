@@ -1,13 +1,13 @@
 package chains
 
-func NewCertificateTestChain(chainContext) (ChainResult, chainContext) {
-	cR := ChainResult{ChainName: "new certificate"}
+func NewCertificateTestChain(cC ChainContext) (ChainResult, ChainContext) {
+	cR := ChainResult{Name: "new certificate"}
 
-	return cR
+	return cR, cC
 }
 
-func RevokeCertificateTestChain(chainContext) (ChainResult, chainContext) {
-	cR := ChainResult{ChainName: "revoke certificate"}
+func RevokeCertificateTestChain(cC ChainContext) (ChainResult, ChainContext) {
+	cR := ChainResult{Name: "revoke certificate"}
 
-	return cR
+	return cR, cC
 }

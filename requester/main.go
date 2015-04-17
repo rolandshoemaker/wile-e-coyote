@@ -8,7 +8,7 @@ import  (
 	"github.com/rolandshoemaker/wile-e-coyote/requester/chains"
 )
 
-var numAttackers int = 1
+var numAttackers int = 25
 var results []chains.ChainResult
 
 func attacker(closeChan chan bool) {
@@ -19,16 +19,12 @@ func attacker(closeChan chan bool) {
 			// goodbye cruel world
 			break
 		default:
+			fmt.Println("attack")
 			testChain, cC := chains.GetChain()
 			chainResult, newContext := testChain(cC)
-			// if empty result wasnt passed...
-			if chainResult != ChainResult{} {
-				results = append(results, chainResult)
-			}
-			if cC != newContext {
-				chain.updateContext(cC, newContext)
-			}
-			chain.SendStats(chainResult)
+			chains.UpdateContext(cC, newContext)
+			go chains.SendStats(chainResult)
+			fmt.Println(chainResult)
 		}
 	}
 }
@@ -60,6 +56,7 @@ func monitorHerd(alive []chan bool) []chan bool {
 			}
 		}
 	}
+	fmt.Println("herded", len(alive), numAttackers)
 
 	return alive
 }
@@ -71,10 +68,12 @@ func main() {
 
 	//go func() {
 	//	fmt.Println("um goroutine")
-		for {
+		//for {
 			aliveAttackers = monitorHerd(aliveAttackers)
-			time.Sleep(time.Second * 5)
-		}
+			wait := make(chan bool)
+			<-wait
+		//	time.Sleep(time.Second * 5)
+		//}
 	//}()
 
 	// livin on the edge!

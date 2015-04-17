@@ -1,13 +1,18 @@
 package chains
 
 import  (
+	"bytes"
 	"crypto/rsa"
 	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"math/rand"
+	"net/http"
 	"time"
 
 	"github.com/garyburd/redigo/redis"
+
+	"github.com/letsencrypt/boulder/core"
 )
 
 type requestResult struct {
@@ -18,58 +23,66 @@ type requestResult struct {
 }
 
 type ChainResult struct {
-    ChainName         string          `json:"chainname,omitempty"`         // which chain is this result from
-    ChainSuccessful   bool            `json:"chainsuccessful,omitempty"`   // was the entire chain successful?
-    ChainTook         time.Duration   `json:"chaintook,omitempty"`         // how long did the entire chain take
+    Name              string          `json:"chainname,omitempty"`         // which chain is this result from
+    Successful        bool            `json:"chainsuccessful,omitempty"`   // was the entire chain successful?
+    Took              time.Duration   `json:"chaintook,omitempty"`         // how long did the entire chain take
     IndividualResults []requestResult `json:"individualresults,omitempty"` // individual requestResults
 }
 
-type chainContext struct {
-	Registrations  []string
+type boulderReg struct {
+	Reg    core.Registration
+	Key interface{}
+}
+
+type boulderAuth struct {
+	Auth    core.Authorization
+	// something to tie to a reg?
+}
+
+type boulderCert struct {
+	Cert    core.Certificate
+	// something to tie to a reg?
+}
+
+type ChainContext struct {
+	Registrations  []boulderReg
 	Authorizations []string
 	Certificates   []string
 }
 
 type testChain struct {
-	TestFunc     func(chainContext) (ChainResult, chainContext)
+	TestFunc     func(ChainContext) (ChainResult, ChainContext)
 	Requirements []string
 }
 
 var TestChains []testChain = []testChain{
 	testChain{TestFunc: NewRegistrationTestChain, Requirements: []string{}},
-	testChain{TestFunc: NewAuthorizationTestChain, Requirements: []string{"registration"}},
-	testChain{TestFunc: NewCertificateTestChain, Requirements: []string{"registration", "authorization"}},
-	testChain{TestFunc: RevokeCertificateTestChain, Requirements: []string{"registration", "certificate"}},
+	// testChain{TestFunc: NewAuthorizationTestChain, Requirements: []string{"registration"}},
+	// testChain{TestFunc: NewCertificateTestChain, Requirements: []string{"registration", "authorization"}},
+	// testChain{TestFunc: RevokeCertificateTestChain, Requirements: []string{"registration", "certificate"}},
 }
 
 // public functions
 
 // return a *random* (ish) test chain from TestChains that
 // satifies testChain.requirements (based on whats in SQL)
-func GetChain() func(chainContext) (ChainResult, chainContext) {
+func GetChain() (func(ChainContext) (ChainResult, ChainContext), ChainContext) {
 	var randChain testChain
+	var cC ChainContext
+	var satisfied bool
 	for {
-		randChain = TestChains[rand.Intn(len(TestChains)-1)]
-		cC := getRequirements(randChain.Requirements)
-		if cC != nil {
+		randChain = TestChains[rand.Intn(len(TestChains))]
+		satisfied, cC = getRequirements(randChain.Requirements)
+		if satisfied {
 			break
 		}
 	}
 	return randChain.TestFunc, cC
 }
 
-func UpdateContext(oldContext, newContext chainContext) {
+func UpdateContext(oldContext, newContext ChainContext) {
 	// figure out whats been added / removed (map approach?)
 	// and update SQL to reflect that
-	if oldContext.Requirements != newContext.Requirements {
-
-	}
-	if oldContext.Authorizations != newContext.Authorizations {
-
-	}
-	if oldContext.Certificates != newContext.Certificates {
-
-	}
 }
 
 func SendStats(result ChainResult) {
@@ -78,7 +91,7 @@ func SendStats(result ChainResult) {
 
 // internal stuff
 
-func getRequirements(reqs []string) (cC chainContext) {
+func getRequirements(reqs []string) (satisfied bool, cC ChainContext) {
 	for _, req := range reqs {
 		switch req {
 		case "registration":
@@ -90,6 +103,7 @@ func getRequirements(reqs []string) (cC chainContext) {
 		}
 	}
 
+	satisfied = true
 	return
 }
 
@@ -110,19 +124,28 @@ func setRedisPubKey(dnsName string, pubKey *rsa.PublicKey, rConn redis.Conn) err
 	return nil
 }
 
-func timedPOST(client, url string, data []byte]) {
+func timedPOST(client *http.Client, url string, data []byte) (body []byte, status int, headers http.Header, since time.Duration, err error) {
 	sTime := time.Now()
 	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(data))
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := client.Do(req)
+	var resp *http.Response
+	resp, err = client.Do(req)
 	if err != nil {
-
+		since = time.Since(sTime)
+		return
 	}
 	defer resp.Body.Close()
 
-	body, _ := ioutil.ReadAll(resp.Body)
-	return body, resp.Status, resp.Header, time.Since(sTime)
+	body, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		since = time.Since(sTime)
+		return
+	}
+	since = time.Since(sTime)
+	status = resp.StatusCode
+	headers = resp.Header
+	return
 }
 
 func timedGET(url string) {
