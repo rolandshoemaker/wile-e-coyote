@@ -95,6 +95,10 @@ func SendStats(stats statsd.Statter, result ChainResult) {
 // utility functions
 
 // borrow stuff from boulder SA
+func existingRegistrations() bool {
+	return true
+}
+
 func getAuthorization() {
 	// return an authorization from sql or nil?
 	// query directly from boulder sql!

@@ -74,8 +74,9 @@ func getCert(clientHello *tls.ClientHelloInfo) (cert *tls.Certificate, err error
 		// DVSNI challenge so lets compute Z... FUN
 		nonce := clientHello.ServerName[0:len(clientHello.ServerName)-len(acmeSuffix)]
 
-		// assume NewAuthorizationTestChain() has set and will delete this already
+		// assume NewAuthorizationTestChain() has set this already and clean it up
 		Dvsni := chains.DvsniChalls[nonce]
+		delete(chains.DvsniChalls, nonce)
 		
 		dnsNames = append(dnsNames, Dvsni.Domain, fmt.Sprintf("%s%s", Dvsni.Z, acmeSuffix))
 	} else {
@@ -86,7 +87,13 @@ func getCert(clientHello *tls.ClientHelloInfo) (cert *tls.Certificate, err error
 	return
 }
 
-func listenAndMeepMeep(srv *http.Server) error {
+func listenAndBeAGenius(srv *http.Server) error {
+	//
+	//         Wile E. Coyote
+	//             GENIUS
+	//
+	// HAVE BRAIN          WILL TRAVEL
+	//
 	tlsConfig := &tls.Config{
 		Certificates: []tls.Certificate{*genSelfSigned([]string{"roadrunner"})}, // because Listener requires at least one
 		ClientAuth: tls.NoClientCert,                                            // and it'll never actually be served
@@ -105,8 +112,9 @@ func listenAndMeepMeep(srv *http.Server) error {
 
 func handler(w http.ResponseWriter, req *http.Request) {
 	if !strings.HasSuffix(req.TLS.ServerName, ".acme.invalid") {
-		// assume NewAuthorizationTestChain() has set and will delete this already
+		// assume NewAuthorizationTestChain() has set this already and clean it up
 		token := chains.SimpleHTTPSChalls[req.TLS.ServerName]
+		delete(chains.SimpleHTTPSChalls, req.TLS.ServerName)
 
 		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte(token))
@@ -117,7 +125,7 @@ func runChallSrv() {
 	http.HandleFunc("/", handler)
 	httpsServer := &http.Server{Addr: ":443"}
 	fmt.Println("Running Challenge server... [Remember to redirect all DNS A records to the local ip address!]")
-	listenAndMeepMeep(httpsServer)
+	listenAndBeAGenius(httpsServer)
 }
 
 //////////////
