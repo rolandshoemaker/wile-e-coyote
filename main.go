@@ -7,16 +7,18 @@
 package main
 
 import  (
-	"fmt"
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"fmt"
+	"log"
 	"math/big"
 	mrand "math/rand"
 	"net"
 	"net/http"
-	"log"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -178,7 +180,7 @@ func monitorHerd(alive []chan bool) []chan bool {
 	return alive
 }
 
-func rampUp(workerIncrement int, finalWorkers int, timeInterval time.Duration) {
+func ArithmeticRampUp(workerIncrement int, finalWorkers int, timeInterval time.Duration) {
 	workPeriods := finalWorkers / workerIncrement
 	totalDuration := time.Duration(timeInterval.Nanoseconds() * int64(workPeriods))
 
@@ -199,6 +201,10 @@ func rampUp(workerIncrement int, finalWorkers int, timeInterval time.Duration) {
 	}
 }
 
+func GeometricRampUp(startWorkers int, steps int, geoFunc func(int) int, timeInterval time.Duration) {
+
+}
+
 func justHammer(numWorkers int) {
 	fmt.Println("\n# Starting hammering\n")
 	numAttackers = numWorkers
@@ -214,5 +220,16 @@ func justHammer(numWorkers int) {
 }
 
 func main() {
-	
+	switch os.Args[1] {
+		case "hammer":
+			workers, err := strconv.Atoi(os.Args[2])
+			if err != nil {
+				fmt.Printf("Argument to hammer [%s] is not an integer!", os.Args[2])
+				return
+			}
+			justHammer(workers)
+		case "aramp":
+			
+		case "gramp":
+	}
 }
