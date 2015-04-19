@@ -18,7 +18,6 @@ import  (
 	"net"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
@@ -26,6 +25,8 @@ import  (
 
 	"github.com/rolandshoemaker/wile-e-coyote/chains"
 )
+
+var version string = "0.0.1"
 
 var statsdServer string = "localhost:8125"
 var mysqlServer  string = ""
@@ -50,7 +51,7 @@ func genSelfSigned(dnsNames []string) (cert *tls.Certificate) {
 		DNSNames: dnsNames,
 	}
 
-	certBytes, err := x509.CreateCertificate(rand.Reader, template, template, chains.TheKey.PublicKey, chains.TheKey)
+	certBytes, err := x509.CreateCertificate(rand.Reader, template, template, &chains.TheKey.PublicKey, &chains.TheKey)
 	if err != nil {
 		log.Println("Couldn't create cert:", err)
 		return &tls.Certificate{}
@@ -58,7 +59,7 @@ func genSelfSigned(dnsNames []string) (cert *tls.Certificate) {
 
 	cert = &tls.Certificate{
 		Certificate: [][]byte{certBytes},
-		PrivateKey: chains.TheKey,
+		PrivateKey: &chains.TheKey,
 	}
 	return
 }
@@ -69,7 +70,6 @@ var acmeSuffix string = ".acme.invalid"
 // (from SNI).
 func getCert(clientHello *tls.ClientHelloInfo) (cert *tls.Certificate, err error) {
 	var dnsNames []string
-	//var publicKey string
 	if strings.HasSuffix(clientHello.ServerName, acmeSuffix) {
 		// DVSNI challenge so lets compute Z... FUN
 		nonce := clientHello.ServerName[0:len(clientHello.ServerName)-len(acmeSuffix)]
@@ -195,14 +195,37 @@ func ArithmeticRampUp(workerIncrement int, finalWorkers int, timeInterval time.D
 	var aliveAttackers []chan bool
 	for i := 1; i <= workPeriods; i++ {
 		numAttackers = i * workerIncrement
-		log.Printf("Work period %d, setting numAttackers -> %d...\n", i, numAttackers)
+		log.Printf("Work period %d, set numAttackers -> %d...\n", i, numAttackers)
 		aliveAttackers = monitorHerd(aliveAttackers)
 		time.Sleep(timeInterval)
 	}
 }
 
-func GeometricRampUp(startWorkers int, steps int, geoFunc func(int) int, timeInterval time.Duration) {
+func GeometricRampUp(startWorkers int, iterations int, geoFunc func(int) int, timeInterval time.Duration) {
+	workersIter := startWorkers
+	var workerSequence []int
+	for i := 0; i < iterations; i++ {
+		workersIter = geoFunc(workersIter)
+		workerSequence = append(workerSequence, workersIter)
+	}
 
+	totalDuration := time.Duration(timeInterval.Nanoseconds() * int64(iterations))
+
+	fmt.Printf("Worker sequence: %v\n", workerSequence)
+	fmt.Printf("Work period length: %s\n", timeInterval)
+	fmt.Printf("Num work periods: %d\n", iterations)
+	fmt.Printf("Total test duration: %s\n", totalDuration)
+
+	fmt.Println("\n# Starting geometric test\n")
+
+	go runChallSrv()
+	var aliveAttackers []chan bool
+	for i, workers := range workerSequence {
+		numAttackers = workers
+		log.Printf("Work period %d, set numAttackers -> %d...\n", i + 1, numAttackers)
+		aliveAttackers = monitorHerd(aliveAttackers)
+		time.Sleep(timeInterval)
+	}
 }
 
 func justHammer(numWorkers int) {
@@ -211,25 +234,61 @@ func justHammer(numWorkers int) {
 	fmt.Printf("Number of workers: %d\n", numAttackers)
 
 	go runChallSrv()
-	var aliveAttackers []chan bool
-	aliveAttackers = monitorHerd(aliveAttackers)
+	chains.DvsniChalls["google"] = chains.DvsniChall{Domain: "google.com", Z: "asdasdasd"}
+	// var aliveAttackers []chan bool
+	// aliveAttackers = monitorHerd(aliveAttackers)
 
 	// wait around foreverz
 	wait := make(chan bool)
 	<-wait
 }
 
+func wecUsage() {
+
+}
+
 func main() {
-	switch os.Args[1] {
-		case "hammer":
-			workers, err := strconv.Atoi(os.Args[2])
-			if err != nil {
-				fmt.Printf("Argument to hammer [%s] is not an integer!", os.Args[2])
-				return
-			}
-			justHammer(workers)
-		case "aramp":
-			
-		case "gramp":
+	fmt.Printf("# wile-e-coyote load tester for Boulder [v%s]\n\n", version)
+
+	if len(os.Args) < 2 {
+		wecUsage()
+	} else {
+		switch os.Args[1] {
+			case "hammer":
+				if len(os.Args[1:]) != 2 {
+					fmt.Printf("Argument parsing error: Not enough arguments!")
+					wecUsage()
+					return
+				}
+				var workers int
+				_, err := fmt.Sscanf(os.Args[2], "%d", &workers)
+				if err != nil {
+					fmt.Printf("Argument parsing error: %s", err)
+					wecUsage()
+					return
+				}
+				justHammer(workers)
+			case "aramp":
+				if len(os.Args[1:]) != 4 {
+					fmt.Printf("Argument parsing error: Not enough arguments!")
+					wecUsage()
+					return
+				}
+				var workerInc int
+				var finalWorkers int
+				var secInterval int
+				_, err := fmt.Sscanf(strings.Join(os.Args[1:], " "), "%d %d %d", &workerInc, &finalWorkers, &secInterval)
+				if err != nil {
+					fmt.Printf("Argument parsing error: %s", err)
+					return
+				}
+				ArithmeticRampUp(workerInc, finalWorkers, time.Duration(secInterval * 1000000000))
+			case "gramp":
+				if len(os.Args[1:]) != 5 {
+					fmt.Printf("Argument parsing error: Not enough arguments!")
+					wecUsage()
+					return
+				}
+		}
 	}
 }
