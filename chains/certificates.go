@@ -1,3 +1,8 @@
+// ┬ ┬┬┬  ┌─┐  ┌─┐  ┌─┐┌─┐┬ ┬┌─┐┌┬┐┌─┐
+// │││││  ├┤───├┤───│  │ │└┬┘│ │ │ ├┤ 
+// └┴┘┴┴─┘└─┘  └─┘  └─┘└─┘ ┴ └─┘ ┴ └─┘
+//
+
 package chains
 
 func NewCertificateTestChain() (ChainResult) {

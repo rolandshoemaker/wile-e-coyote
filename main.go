@@ -1,3 +1,9 @@
+// ┬ ┬┬┬  ┌─┐  ┌─┐  ┌─┐┌─┐┬ ┬┌─┐┌┬┐┌─┐
+// │││││  ├┤───├┤───│  │ │└┬┘│ │ │ ├┤ 
+// └┴┘┴┴─┘└─┘  └─┘  └─┘└─┘ ┴ └─┘ ┴ └─┘
+//
+// This is a load tester for the Boulder CA software!
+
 package main
 
 import  (
