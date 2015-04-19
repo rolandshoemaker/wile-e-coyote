@@ -2,7 +2,7 @@
 // │││││  ├┤───├┤───│  │ │└┬┘│ │ │ ├┤ 
 // └┴┘┴┴─┘└─┘  └─┘  └─┘└─┘ ┴ └─┘ ┴ └─┘
 //
-// This is a load tester for the Boulder CA software!
+// This is a load tester for the Boulder CA server!
 
 package main
 
