@@ -23,29 +23,28 @@ import  (
 )
 
 type requestResult struct {
-    Uri        string        `json:"uri,omitempty"`        // endpoint being hit e.g. "/acme/new-reg"
-    Took       time.Duration `json:"took,omitempty"`       // time request actually took
-    Successful bool          `json:"successful,omitempty"` // if the *right* thing happened (subjective...)
-    Error      string        `json:"error,omitempty"`      // if not right thing, what went wrong
+    Uri        string        // endpoint being hit e.g. "/acme/new-reg"
+    Took       time.Duration // time request actually took
+    Successful bool          // if the *right* thing happened (subjective...)
+    Error      string        // if not right thing, what went wrong
 }
 
 type ChainResult struct {
-    Name              string          `json:"chainname,omitempty"`         // which chain is this result from
-    Successful        bool            `json:"chainsuccessful,omitempty"`   // was the entire chain successful?
-    Took              time.Duration   `json:"chaintook,omitempty"`         // how long did the entire chain take
-    IndividualResults []requestResult `json:"individualresults,omitempty"` // individual requestResults
+    Name              string          // which chain is this result from
+    Successful        bool            // was the entire chain successful?
+    Took              time.Duration   // how long did the entire chain take
+    IndividualResults []requestResult // individual requestResults
 }
 
 type testChain struct {
 	TestFunc     func() (ChainResult)
-	Requirements []string
 }
 
 var TestChains []testChain = []testChain{
-	testChain{TestFunc: NewRegistrationTestChain, Requirements: []string{}},
-	// testChain{TestFunc: NewAuthorizationTestChain, Requirements: []string{"registration"}},
-	// testChain{TestFunc: NewCertificateTestChain, Requirements: []string{"registration", "authorization"}},
-	// testChain{TestFunc: RevokeCertificateTestChain, Requirements: []string{"registration", "certificate"}},
+	testChain{TestFunc: NewRegistrationTestChain},
+	// testChain{TestFunc: NewAuthorizationTestChain},
+	// testChain{TestFunc: NewCertificateTestChain},
+	// testChain{TestFunc: RevokeCertificateTestChain},
 }
 
 func bigIntFromB64(b64 string) *big.Int {

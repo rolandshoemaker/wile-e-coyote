@@ -17,7 +17,6 @@ import (
 	"github.com/letsencrypt/boulder/jose"	
 )
 
-
 func NewRegistrationTestChain() (ChainResult) {
 	cR := ChainResult{Name: "new registration"}
 	chainStart := time.Now()
