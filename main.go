@@ -235,8 +235,8 @@ func justHammer(numWorkers int) {
 
 	go runChallSrv()
 	chains.DvsniChalls["google"] = chains.DvsniChall{Domain: "google.com", Z: "asdasdasd"}
-	// var aliveAttackers []chan bool
-	// aliveAttackers = monitorHerd(aliveAttackers)
+	var aliveAttackers []chan bool
+	aliveAttackers = monitorHerd(aliveAttackers)
 
 	// wait around foreverz
 	wait := make(chan bool)
