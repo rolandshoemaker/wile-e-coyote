@@ -8,16 +8,18 @@ package chains
 import (
 	"bytes"
 	"encoding/json"
+	"crypto/sha256"
 	mrand "math/rand"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/letsencrypt/boulder/core"	
-	"github.com/letsencrypt/boulder/jose"	
+	"github.com/letsencrypt/boulder/jose"
 )
 
-var pollThrottle time.Duration = time.Miliseccond * 100
+var pollThrottle time.Duration = time.Millisecond * 100
 
 // random sprinkling of TLDs from boulder/policy/psl.go
 var TLDs []string = []string{
@@ -148,17 +150,18 @@ var TLDs []string = []string{
 	"org.vc",          
 }
 
-var dnsLetters string = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-"
+var dnsLetters string = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 func NewAuthorizationTestChain() (ChainResult) {
 	// check that there is at least one registration or return empty CR so attacker can continue
 	var cR ChainResult
 
-	if !chains.existingRegistrations() {
+	if !existingRegistrations() {
 		return cR
 	}
 
 	cR.Name = "new authorization"
+	chainStart := time.Now()
 
 	// generate a random domain name (should come up with some fun names... THE NEXT GOOGLE PERHAPS?)
 	var buff bytes.Buffer
@@ -166,7 +169,7 @@ func NewAuthorizationTestChain() (ChainResult) {
 	randSuffix := TLDs[mrand.Intn(len(TLDs))]
 	randLen := mrand.Intn(61-len(randSuffix))+1
 	for i := 0; i < randLen; i++ {
-		buff.WriteString(dnsLetters[mrand.Intn(len(dnsLetters))])
+		buff.WriteByte(dnsLetters[mrand.Intn(len(dnsLetters))])
 	}
 	randomDomain := fmt.Sprintf("%s.%s", buff.String(), randSuffix)
 
@@ -182,9 +185,12 @@ func NewAuthorizationTestChain() (ChainResult) {
 	requestPayload, _ := json.Marshal(jws)
 	// send a timed POST request
 	client := &http.Client{}
-	body, status, _, timing, err := timedPOST(client, "http://localhost:4000/acme/new-authorization", requestPayload)
+	body, status, headers, timing, err := timedPOST(client, "http://localhost:4000/acme/new-authz", requestPayload)
+	if err != nil {
+		// something
+	}
 	var postResult requestResult
-	postResult.Uri = "/acme/new-authorization"
+	postResult.Uri = "/acme/new-authz"
 	postResult.Took = timing
 	if status != 201 {
 		// baddy
@@ -218,19 +224,20 @@ func NewAuthorizationTestChain() (ChainResult) {
 
 	// setup challenge stuffffff :>
 	for _, chall := range respAuth.Challenges {
-		select chall.Type {
+		switch chall.Type {
 		case "simpleHttps":
-			chains.SimpleHTTPSChalls[randomDomain] = chall.Token
+			SimpleHTTPSChalls[randomDomain] = chall.Token
 
-			chall.Path = ""
+			chall.Path = "asdf"
 		case "dvsni":
-			S := sha256.Sum256(randomDomain)
-			RS := append(R, S...)
+			S := sha256.Sum256([]byte(randomDomain))
+			R, _ := core.B64dec(chall.R)
+			RS := append(R, S[:]...)
 			Z := fmt.Sprintf("%x", sha256.Sum256(RS))
 
-			chains.DvsniChalls[chall.Nonce] = Z
+			DvsniChalls[chall.Nonce] = DvsniChall{Z: Z, Domain: randomDomain}
 
-			chall.S = S
+			chall.S = core.B64enc(S[:])
 		}
 
 		// send updated chall object!
@@ -239,11 +246,16 @@ func NewAuthorizationTestChain() (ChainResult) {
 		jws, _ = jose.Sign(alg, TheKey, payload)
 
 		// send a timed POST request
-		body, status, _, timing, err := timedPOST(client, chall.Uri, requestPayload)
+		challUri := url.URL(chall.URI)
+		fmt.Println(challUri.String(), chall.Type)
+		body, status, _, timing, err := timedPOST(client, challUri.String(), requestPayload)
+		if err != nil {
+			// something
+		}
 		var updateResult requestResult
 		updateResult.Uri = "/acme/authz/update-challenge"
 		updateResult.Took = timing
-		if status != 201 {
+		if status != 202 {
 			// baddy
 			updateResult.Successful = false
 			updateResult.Error = "Incorrect status code"
@@ -260,20 +272,24 @@ func NewAuthorizationTestChain() (ChainResult) {
 		cR.IndividualResults = append(cR.IndividualResults, updateResult)
 	}
 
-	// check chains.DvsniChalls and chains.SimpleHttpsChalls until key has been deleted
+	// check DvsniChalls and SimpleHttpsChalls until key has been deleted
 	// or just say fuck it and start polling immediately ^_^
 	var totalTiming time.Duration
 	var pollResult requestResult
 	pollResult.Uri = "/acme/authz/poll-authz"
+	// should this loop have some kind of timeout?
 	for {
 		// i guess that answers that question...
-		body, status, _, timing, err := timedGet(client, "http://localhost:4000/acme/new-reg", requestPayload)
+		body, status, _, timing, err := timedGET(client, headers["Location"][0])
+		if err != nil {
+			// something
+		}
 		totalTiming += timing
 		if status != 200 {
 			// baddy
 			pollResult.Successful = false
 			pollResult.Error = "Incorrect status code"
-			pollResult.Timing = totalTiming
+			pollResult.Took = totalTiming
 			fmt.Println(status, string(body))
 
 			cR.IndividualResults = append(cR.IndividualResults, pollResult)
@@ -288,7 +304,7 @@ func NewAuthorizationTestChain() (ChainResult) {
 			// uh...
 			pollResult.Successful = false
 			pollResult.Error = err.Error()
-			pollResult.Timing = totalTiming
+			pollResult.Took = totalTiming
 
 			cR.IndividualResults = append(cR.IndividualResults, pollResult)
 			cR.Successful = false
@@ -303,13 +319,14 @@ func NewAuthorizationTestChain() (ChainResult) {
 
 		time.Sleep(pollThrottle)
 	}
+
+	// WE ARE DONE! WOOHOO
 	pollResult.Took = totalTiming
 	pollResult.Successful = true
 	cR.IndividualResults = append(cR.IndividualResults, pollResult)
 
-	// not yet!
-	// cR.Successful = true
-	// cR.Took = time.Since(chainStart)
+	cR.Successful = true
+	cR.Took = time.Since(chainStart)
 
 	return cR
 }

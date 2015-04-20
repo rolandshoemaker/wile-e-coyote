@@ -43,6 +43,9 @@ func NewRegistrationTestChain() (ChainResult) {
 	// send a timed POST request
 	client := &http.Client{}
 	body, status, _, timing, err := timedPOST(client, "http://localhost:4000/acme/new-reg", requestPayload)
+	if err != nil {
+		// something
+	}
 	var postResult requestResult
 	postResult.Uri = "/acme/new-reg"
 	postResult.Took = timing

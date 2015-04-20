@@ -111,6 +111,7 @@ func listenAndBeAGenius(srv *http.Server) error {
 }
 
 func handler(w http.ResponseWriter, req *http.Request) {
+	fmt.Println("HIT BINGBINGBING\n\n")
 	if !strings.HasSuffix(req.TLS.ServerName, ".acme.invalid") {
 		// assume NewAuthorizationTestChain() has set this already and clean it up
 		token := chains.SimpleHTTPSChalls[req.TLS.ServerName]
@@ -123,7 +124,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 
 func runChallSrv() {
 	http.HandleFunc("/", handler)
-	httpsServer := &http.Server{Addr: ":443"}
+	httpsServer := &http.Server{Addr: "192.168.125.2:443"}
 	fmt.Println("Running Challenge server... [Remember to redirect all DNS A records to the local ip address!]")
 	listenAndBeAGenius(httpsServer)
 }
@@ -242,7 +243,6 @@ func justHammer(numWorkers int) {
 	fmt.Printf("Number of workers: %d\n", numAttackers)
 
 	go runChallSrv()
-	chains.DvsniChalls["google"] = chains.DvsniChall{Domain: "google.com", Z: "asdasdasd"}
 	var aliveAttackers []chan bool
 	aliveAttackers = monitorHerd(aliveAttackers)
 
@@ -251,12 +251,56 @@ func justHammer(numWorkers int) {
 	<-wait
 }
 
-func wecUsage() {
+func plainSeq(workerSeq []int, timeInterval time.Duration) {
+	totalDuration := time.Duration(timeInterval.Nanoseconds() * int64(len(workerSeq)))
 
+	fmt.Printf("Worker sequence: %v\n", workerSeq)
+	fmt.Printf("Work period length: %s\n", timeInterval)
+	fmt.Printf("Num work periods: %d\n", len(workerSeq))
+	fmt.Printf("Total test duration: %s\n", totalDuration)
+
+	fmt.Println("\n# Starting sequence test\n")
+
+	go runChallSrv()
+	var aliveAttackers []chan bool
+	for i, workers := range workerSeq {
+		numAttackers = workers
+		log.Printf("Work period %d, set numAttackers -> %d...\n", i + 1, numAttackers)
+		aliveAttackers = monitorHerd(aliveAttackers)
+		time.Sleep(timeInterval)
+	}
+}
+
+var usage string = `wile-e-coyote [subcommand] --mysql
+
+Subcommands
+    hammer  WORKERNUM
+            Just hammer the server with a constant worker number.
+
+    seq     INTERVAL WORKERNUM WORKERNUM...
+            Increase the number of workers in a fixed sequence with
+            fixed intervals.
+
+    aramp   WORKERINCREMENT FINALWORKERS INTERVAL
+            Increase the number of workers in a arithmetic sequence
+            with fixed intervals.
+
+    gramp   SOMETHING
+            Increase the number of workers in a geometic sequence
+            with fixed intervals.
+
+Global Options
+    --mysql    The MySQL URI for the boulder DB (incl. username/password e.g. 
+    	       "username:password@tcp(127.0.0.1:3306)/boulder").
+`
+
+func wecUsage() {
+	fmt.Println(usage)
+	return
 }
 
 func main() {
-	fmt.Printf("# wile-e-coyote load tester for Boulder [v%s]\n\n", version)
+	fmt.Printf("# wile-e-coyote - a load tester for Boulder [v%s]\n\n", version)
 
 	if len(os.Args) < 2 {
 		wecUsage()
@@ -271,11 +315,35 @@ func main() {
 				var workers int
 				_, err := fmt.Sscanf(os.Args[2], "%d", &workers)
 				if err != nil {
-					fmt.Printf("Argument parsing error: %s", err)
+					fmt.Printf("Argument parsing error: %s\n", err)
 					wecUsage()
 					return
 				}
 				justHammer(workers)
+			case "seq":
+				if len(os.Args[1:]) < 4 {
+					fmt.Printf("Argument parsing error: Not enough arguments!")
+					wecUsage()
+					return
+				}
+				var secInterval int
+				_, err := fmt.Sscanf(os.Args[2], "%d", &secInterval)
+				if err != nil {
+					fmt.Printf("Argument parsing error: %s\n", err)
+					wecUsage()
+					return
+				}
+				var workSeq []int
+				for _, w := range os.Args[3:] {
+					var wInt int
+					_, err := fmt.Sscanf(w, "%d", &wInt)
+					if err != nil {
+						fmt.Printf("Argument parsing error: %s\n", err)
+						return
+					}
+					workSeq = append(workSeq, wInt)
+				}
+				plainSeq(workSeq, time.Duration(secInterval * 1000000000))
 			case "aramp":
 				if len(os.Args[1:]) != 4 {
 					fmt.Printf("Argument parsing error: Not enough arguments!")
@@ -285,15 +353,15 @@ func main() {
 				var workerInc int
 				var finalWorkers int
 				var secInterval int
-				_, err := fmt.Sscanf(strings.Join(os.Args[1:], " "), "%d %d %d", &workerInc, &finalWorkers, &secInterval)
+				_, err := fmt.Sscanf(strings.Join(os.Args[2:], " "), "%d %d %d", &workerInc, &finalWorkers, &secInterval)
 				if err != nil {
-					fmt.Printf("Argument parsing error: %s", err)
+					fmt.Printf("Argument parsing error: %s\n", err)
 					return
 				}
 				ArithmeticRampUp(workerInc, finalWorkers, time.Duration(secInterval * 1000000000))
 			case "gramp":
 				if len(os.Args[1:]) != 5 {
-					fmt.Printf("Argument parsing error: Not enough arguments!")
+					fmt.Println("Argument parsing error: Not enough arguments!")
 					wecUsage()
 					return
 				}
