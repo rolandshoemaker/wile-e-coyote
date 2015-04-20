@@ -271,7 +271,7 @@ func plainSeq(workerSeq []int, timeInterval time.Duration) {
 	}
 }
 
-var usage string = `wile-e-coyote [subcommand] --mysql
+var usage string = `wile-e-coyote [subcommand] --mysql MYSQLURI
 
 Subcommands
     hammer  WORKERNUM
@@ -279,19 +279,19 @@ Subcommands
 
     seq     INTERVAL WORKERNUM WORKERNUM...
             Increase the number of workers in a fixed sequence with
-            fixed intervals.
+            fixed interval (in seconds).
 
-    aramp   WORKERINCREMENT FINALWORKERS INTERVAL
+    aseq    WORKERINCREMENT FINALWORKERS INTERVAL
             Increase the number of workers in a arithmetic sequence
-            with fixed intervals.
+            with fixed interval (in seconds).
 
     gramp   SOMETHING
             Increase the number of workers in a geometic sequence
-            with fixed intervals.
+            with fixed interval (in seconds).
 
 Global Options
-    --mysql    The MySQL URI for the boulder DB (incl. username/password e.g. 
-    	       "username:password@tcp(127.0.0.1:3306)/boulder").
+    --mysql MYSQLURI    The MySQL URI for the boulder DB (incl. username/password e.g. 
+    	                "username:password@tcp(127.0.0.1:3306)/boulder").
 `
 
 func wecUsage() {
@@ -344,7 +344,7 @@ func main() {
 					workSeq = append(workSeq, wInt)
 				}
 				plainSeq(workSeq, time.Duration(secInterval * 1000000000))
-			case "aramp":
+			case "aseq":
 				if len(os.Args[1:]) != 4 {
 					fmt.Printf("Argument parsing error: Not enough arguments!")
 					wecUsage()
