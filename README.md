@@ -91,7 +91,7 @@ The only state `wile-e-coyote` stores itself is information about `simpleHttps` 
 ```
 counters
 --------
-    // Based purely on request / response body size + headers
+    # Based purely on request / response body size + headers
     [bytes] Wile-E-Coyote.TrafficIn
     [bytes] Wile-E-Coyote.TrafficOut
 
@@ -115,4 +115,4 @@ timings
 
 ```
 
-A bunch of Go profiling metrics (memory usage, number of goroutines, etc etc etc) under `Wile-E-Coyote.Gostats.` for `wile-e-coyote` itself (not `boulder`) are also collected.
+A bunch of Go profiling metrics (memory usage, number of goroutines, etc etc etc) under `Gostats.Wile-E-Coyote.` for `wile-e-coyote` itself (not `boulder`) are also collected.

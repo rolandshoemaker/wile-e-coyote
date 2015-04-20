@@ -136,7 +136,7 @@ func runChallSrv() {
 var numAttackers int = 0
 
 func attacker(closeChan chan bool) {
-	stats, err := statsd.NewClient(statsdServer, "wile-e-coyote")
+	stats, err := statsd.NewClient(statsdServer, "Wile-E-Coyote")
 	if err != nil {
 		log.Println("oh no statsd b0rkd")
 		stats, _ = statsd.NewNoopClient(nil)
@@ -271,6 +271,27 @@ func plainSeq(workerSeq []int, timeInterval time.Duration) {
 	}
 }
 
+func Profile(profileName string, stats statsd.Statter) {
+	for {
+		var memoryStats runtime.MemStats
+		runtime.ReadMemStats(&memoryStats)
+
+		stats.Gauge(fmt.Sprintf("Gostats.%s.Goroutines", profileName), int64(runtime.NumGoroutine()), 1.0)
+
+		stats.Gauge(fmt.Sprintf("Gostats.%s.Heap.Objects", profileName), int64(memoryStats.HeapObjects), 1.0)
+		stats.Gauge(fmt.Sprintf("Gostats.%s.Heap.Idle", profileName), int64(memoryStats.HeapIdle), 1.0)
+		stats.Gauge(fmt.Sprintf("Gostats.%s.Heap.InUse", profileName), int64(memoryStats.HeapInuse), 1.0)
+		stats.Gauge(fmt.Sprintf("Gostats.%s.Heap.Released", profileName), int64(memoryStats.HeapReleased), 1.0)
+
+		gcPauseAvg := int64(memoryStats.PauseTotalNs) / int64(len(memoryStats.PauseNs))
+
+		stats.Timing(fmt.Sprintf("Gostats.%s.Gc.PauseAvg", profileName), gcPauseAvg, 1.0)
+		stats.Gauge(fmt.Sprintf("Gostats.%s.Gc.NextAt", profileName), int64(memoryStats.NextGC), 1.0)
+
+		time.Sleep(time.Second)
+	}
+}
+
 var usage string = `wile-e-coyote [subcommand] --mysql MYSQLURI
 
 Subcommands
@@ -285,10 +306,6 @@ Subcommands
             Increase the number of workers in a arithmetic sequence
             with fixed interval (in seconds).
 
-    gramp   SOMETHING
-            Increase the number of workers in a geometic sequence
-            with fixed interval (in seconds).
-
 Global Options
     --mysql MYSQLURI    The MySQL URI for the boulder DB (incl. username/password e.g. 
     	                "username:password@tcp(127.0.0.1:3306)/boulder").
@@ -301,6 +318,12 @@ func wecUsage() {
 
 func main() {
 	fmt.Printf("# wile-e-coyote - a load tester for Boulder [v%s]\n\n", version)
+	stats, err := statsd.NewClient(statsdServer, "wile-e-coyote")
+	if err != nil {
+		log.Println("oh no statsd b0rkd")
+		stats, _ = statsd.NewNoopClient(nil)
+	}
+	go Profile("Wile-E-Coyote", stats)
 
 	if len(os.Args) < 2 {
 		wecUsage()
@@ -359,12 +382,6 @@ func main() {
 					return
 				}
 				ArithmeticRampUp(workerInc, finalWorkers, time.Duration(secInterval * 1000000000))
-			case "gramp":
-				if len(os.Args[1:]) != 5 {
-					fmt.Println("Argument parsing error: Not enough arguments!")
-					wecUsage()
-					return
-				}
 		}
 	}
 }
