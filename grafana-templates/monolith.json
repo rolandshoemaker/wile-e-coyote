@@ -1,0 +1,271 @@
+{
+  "id": 1,
+  "title": "Monolith dashboard",
+  "originalTitle": "Monolith dashboard",
+  "tags": [],
+  "style": "dark",
+  "timezone": "browser",
+  "editable": true,
+  "hideControls": false,
+  "sharedCrosshair": false,
+  "rows": [
+    {
+      "collapse": false,
+      "editable": true,
+      "height": "250px",
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "datasource": "StatsD",
+          "editable": true,
+          "error": false,
+          "fill": 0,
+          "grid": {
+            "leftLogBase": 1,
+            "leftMax": null,
+            "leftMin": null,
+            "rightLogBase": 1,
+            "rightMax": null,
+            "rightMin": null,
+            "threshold1": null,
+            "threshold1Color": "rgba(216, 200, 27, 0.27)",
+            "threshold2": null,
+            "threshold2Color": "rgba(234, 112, 112, 0.22)"
+          },
+          "id": 1,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [
+            {
+              "alias": "stats.timers.BoulderTests.Gostats.Monolith.Gc.PauseAvg.mean_90",
+              "yaxis": 2
+            },
+            {
+              "alias": "stats.timers.BoulderTests.Gostats.Monolith.Gc.PauseAvg.mean",
+              "yaxis": 2
+            },
+            {
+              "alias": "stats.timers.Boulder.Gostats.Monolith.Gc.PauseAvg.mean_90",
+              "yaxis": 2
+            },
+            {
+              "alias": "stats.timers.Boulder.Gostats.Monolith.Gc.PauseAvg.mean",
+              "yaxis": 2
+            },
+            {
+              "alias": "PauseAvg",
+              "yaxis": 2
+            },
+            {
+              "alias": "PauseAvg.mean_90",
+              "yaxis": 2
+            }
+          ],
+          "span": 12,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "target": "aliasByNode(stats.gauges.BoulderTests.Gostats.Monolith.Gc.*, 6)"
+            },
+            {
+              "target": "aliasByNode(stats.gauges.BoulderTests.Gostats.Monolith.Heap.*, 6)"
+            },
+            {
+              "target": "aliasByNode(stats.gauges.BoulderTests.Gostats.Monolith.Goroutines, 5)"
+            },
+            {
+              "target": "aliasByNode(stats.timers.BoulderTests.Gostats.Monolith.Gc.PauseAvg.mean, 6)"
+            },
+            {
+              "target": "aliasByNode(stats.timers.BoulderTests.Gostats.Monolith.Gc.PauseAvg.mean_90, 6, 7)"
+            }
+          ],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Monolith profiling",
+          "tooltip": {
+            "shared": true,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "x-axis": true,
+          "y-axis": true,
+          "y_formats": [
+            "bytes",
+            "ns"
+          ]
+        }
+      ],
+      "title": "Row"
+    },
+    {
+      "collapse": false,
+      "editable": true,
+      "height": "250px",
+      "panels": [
+        {
+          "aliasColors": {},
+          "bars": false,
+          "datasource": "StatsD",
+          "editable": true,
+          "error": false,
+          "fill": 0,
+          "grid": {
+            "leftLogBase": 1,
+            "leftMax": null,
+            "leftMin": null,
+            "rightLogBase": 1,
+            "rightMax": null,
+            "rightMin": null,
+            "threshold1": null,
+            "threshold1Color": "rgba(216, 200, 27, 0.27)",
+            "threshold2": null,
+            "threshold2Color": "rgba(234, 112, 112, 0.22)"
+          },
+          "id": 2,
+          "legend": {
+            "avg": false,
+            "current": false,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": false
+          },
+          "lines": true,
+          "linewidth": 1,
+          "links": [],
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [
+            {
+              "alias": "stats.timers.wile-e-coyote.Gostats.Wile-E-Coyote.Gc.PauseAvg.mean",
+              "yaxis": 2
+            },
+            {
+              "alias": "stats.timers.wile-e-coyote.Gostats.Wile-E-Coyote.Gc.PauseAvg.mean_90",
+              "yaxis": 2
+            },
+            {
+              "alias": "stats.timers.wile-e-coyote.Gostats.Gc.PauseAvg.mean",
+              "yaxis": 2
+            },
+            {
+              "alias": "stats.timers.wile-e-coyote.Gostats.Gc.PauseAvg.mean_90",
+              "yaxis": 2
+            },
+            {
+              "alias": "PauseAvg.mean_90",
+              "yaxis": 2
+            },
+            {
+              "alias": "PauseAvg",
+              "yaxis": 2
+            }
+          ],
+          "span": 12,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "hide": false,
+              "target": "aliasByNode(stats.timers.wile-e-coyote.Gostats.Gc.PauseAvg.mean, 5)"
+            },
+            {
+              "target": "aliasByNode(stats.timers.wile-e-coyote.Gostats.Gc.PauseAvg.mean_90, 5, 6)"
+            },
+            {
+              "target": "aliasByNode(stats.gauges.wile-e-coyote.Gostats.Gc.NextAt, 5)"
+            },
+            {
+              "target": "aliasByNode(stats.gauges.wile-e-coyote.Gostats.Heap.*, 5)"
+            },
+            {
+              "target": "aliasByNode(stats.gauges.wile-e-coyote.Gostats.Goroutines, 4)"
+            }
+          ],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Wile-E-Coyote profiling",
+          "tooltip": {
+            "shared": true,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "x-axis": true,
+          "y-axis": true,
+          "y_formats": [
+            "bytes",
+            "ns"
+          ]
+        }
+      ],
+      "title": "New row"
+    }
+  ],
+  "nav": [
+    {
+      "collapse": false,
+      "enable": true,
+      "notice": false,
+      "now": true,
+      "refresh_intervals": [
+        "5s",
+        "10s",
+        "30s",
+        "1m",
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "2h",
+        "1d"
+      ],
+      "status": "Stable",
+      "time_options": [
+        "5m",
+        "15m",
+        "1h",
+        "6h",
+        "12h",
+        "24h",
+        "2d",
+        "7d",
+        "30d"
+      ],
+      "type": "timepicker"
+    }
+  ],
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "schemaVersion": 6,
+  "version": 12
+}
