@@ -1,7 +1,7 @@
 {
   "id": 1,
-  "title": "Monolith dashboard",
-  "originalTitle": "Monolith dashboard",
+  "title": "Monolith tests dashboard",
+  "originalTitle": "Monolith tests dashboard",
   "tags": [],
   "style": "dark",
   "timezone": "browser",
@@ -77,7 +77,7 @@
               "yaxis": 2
             }
           ],
-          "span": 12,
+          "span": 6,
           "stack": false,
           "steppedLine": false,
           "targets": [
@@ -86,9 +86,6 @@
             },
             {
               "target": "aliasByNode(stats.gauges.BoulderTests.Gostats.Monolith.Heap.*, 6)"
-            },
-            {
-              "target": "aliasByNode(stats.gauges.BoulderTests.Gostats.Monolith.Goroutines, 5)"
             },
             {
               "target": "aliasByNode(stats.timers.BoulderTests.Gostats.Monolith.Gc.PauseAvg.mean, 6)"
@@ -111,6 +108,67 @@
             "bytes",
             "ns"
           ]
+        },
+        {
+          "title": "Monolith goroutines",
+          "error": false,
+          "span": 6,
+          "editable": true,
+          "type": "graph",
+          "id": 3,
+          "datasource": "StatsD",
+          "renderer": "flot",
+          "x-axis": true,
+          "y-axis": true,
+          "y_formats": [
+            "short",
+            "short"
+          ],
+          "grid": {
+            "leftLogBase": 1,
+            "leftMax": null,
+            "rightMax": null,
+            "leftMin": 0,
+            "rightMin": null,
+            "rightLogBase": 1,
+            "threshold1": null,
+            "threshold2": null,
+            "threshold1Color": "rgba(216, 200, 27, 0.27)",
+            "threshold2Color": "rgba(234, 112, 112, 0.22)"
+          },
+          "lines": true,
+          "fill": 0,
+          "linewidth": 1,
+          "points": false,
+          "pointradius": 5,
+          "bars": false,
+          "stack": false,
+          "percentage": false,
+          "legend": {
+            "show": true,
+            "values": false,
+            "min": false,
+            "max": false,
+            "current": false,
+            "total": false,
+            "avg": false
+          },
+          "nullPointMode": "connected",
+          "steppedLine": false,
+          "tooltip": {
+            "value_type": "cumulative",
+            "shared": true
+          },
+          "timeFrom": null,
+          "timeShift": null,
+          "targets": [
+            {
+              "target": "aliasByNode(stats.gauges.BoulderTests.Gostats.Monolith.Goroutines, 5)"
+            }
+          ],
+          "aliasColors": {},
+          "seriesOverrides": [],
+          "links": []
         }
       ],
       "title": "Row"
@@ -183,7 +241,7 @@
               "yaxis": 2
             }
           ],
-          "span": 12,
+          "span": 6,
           "stack": false,
           "steppedLine": false,
           "targets": [
@@ -199,9 +257,6 @@
             },
             {
               "target": "aliasByNode(stats.gauges.wile-e-coyote.Gostats.Heap.*, 5)"
-            },
-            {
-              "target": "aliasByNode(stats.gauges.wile-e-coyote.Gostats.Goroutines, 4)"
             }
           ],
           "timeFrom": null,
@@ -218,6 +273,67 @@
             "bytes",
             "ns"
           ]
+        },
+        {
+          "title": "Wile-E-Coyote goroutines",
+          "error": false,
+          "span": 6,
+          "editable": true,
+          "type": "graph",
+          "id": 4,
+          "datasource": "StatsD",
+          "renderer": "flot",
+          "x-axis": true,
+          "y-axis": true,
+          "y_formats": [
+            "short",
+            "short"
+          ],
+          "grid": {
+            "leftLogBase": 1,
+            "leftMax": null,
+            "rightMax": null,
+            "leftMin": 0,
+            "rightMin": null,
+            "rightLogBase": 1,
+            "threshold1": null,
+            "threshold2": null,
+            "threshold1Color": "rgba(216, 200, 27, 0.27)",
+            "threshold2Color": "rgba(234, 112, 112, 0.22)"
+          },
+          "lines": true,
+          "fill": 0,
+          "linewidth": 1,
+          "points": false,
+          "pointradius": 5,
+          "bars": false,
+          "stack": false,
+          "percentage": false,
+          "legend": {
+            "show": true,
+            "values": false,
+            "min": false,
+            "max": false,
+            "current": false,
+            "total": false,
+            "avg": false
+          },
+          "nullPointMode": "connected",
+          "steppedLine": false,
+          "tooltip": {
+            "value_type": "cumulative",
+            "shared": true
+          },
+          "timeFrom": null,
+          "timeShift": null,
+          "targets": [
+            {
+              "target": "aliasByNode(stats.gauges.wile-e-coyote.Gostats.Goroutines, 4)"
+            }
+          ],
+          "aliasColors": {},
+          "seriesOverrides": [],
+          "links": []
         }
       ],
       "title": "New row"
@@ -267,5 +383,5 @@
     "list": []
   },
   "schemaVersion": 6,
-  "version": 12
+  "version": 15
 }
