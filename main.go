@@ -11,6 +11,7 @@ import  (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"database/sql"
 	"fmt"
 	"log"
 	"math/big"
@@ -18,10 +19,12 @@ import  (
 	"net"
 	"net/http"
 	"os"
+	"runtime"
 	"strings"
 	"time"
 
 	"github.com/letsencrypt/boulder/Godeps/_workspace/src/github.com/cactus/go-statsd-client/statsd"
+	_ "github.com/letsencrypt/boulder/Godeps/_workspace/src/github.com/go-sql-driver/mysql"
 
 	"github.com/rolandshoemaker/wile-e-coyote/chains"
 )
@@ -29,7 +32,9 @@ import  (
 var version string = "0.0.1"
 
 var statsdServer string = "localhost:8125"
-var mysqlServer  string = ""
+
+var sqlDriver string = "mysql"
+var sqlServer string = "root:password@tcp(192.168.125.2:3306)/boulder"
 
 //////////////////////
 // Challenge server //
@@ -120,6 +125,7 @@ func handler(w http.ResponseWriter, req *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte(token))
 	}
+	return
 }
 
 func runChallSrv() {
@@ -210,41 +216,14 @@ func ArithmeticRampUp(workerIncrement int, finalWorkers int, timeInterval time.D
 	}
 }
 
-func GeometricRampUp(startWorkers int, iterations int, geoFunc func(int) int, timeInterval time.Duration) {
-	workersIter := startWorkers
-	var workerSequence []int
-	for i := 0; i < iterations; i++ {
-		workersIter = geoFunc(workersIter)
-		workerSequence = append(workerSequence, workersIter)
-	}
-
-	totalDuration := time.Duration(timeInterval.Nanoseconds() * int64(iterations))
-
-	fmt.Printf("Worker sequence: %v\n", workerSequence)
-	fmt.Printf("Work period length: %s\n", timeInterval)
-	fmt.Printf("Num work periods: %d\n", iterations)
-	fmt.Printf("Total test duration: %s\n", totalDuration)
-
-	fmt.Println("\n# Starting geometric test\n")
-
-	go runChallSrv()
-	var aliveAttackers []chan bool
-	for i, workers := range workerSequence {
-		numAttackers = workers
-		log.Printf("Work period %d, set numAttackers -> %d...\n", i + 1, numAttackers)
-		aliveAttackers = monitorHerd(aliveAttackers)
-		time.Sleep(timeInterval)
-	}
-}
-
 func justHammer(numWorkers int) {
 	fmt.Println("\n# Starting hammering\n")
 	numAttackers = numWorkers
 	fmt.Printf("Number of workers: %d\n", numAttackers)
 
 	go runChallSrv()
-	var aliveAttackers []chan bool
-	aliveAttackers = monitorHerd(aliveAttackers)
+	//var aliveAttackers []chan bool
+	//aliveAttackers = monitorHerd(aliveAttackers)
 
 	// wait around foreverz
 	wait := make(chan bool)
@@ -271,25 +250,56 @@ func plainSeq(workerSeq []int, timeInterval time.Duration) {
 	}
 }
 
-func Profile(profileName string, stats statsd.Statter) {
+func profile(stats statsd.Statter) {
 	for {
 		var memoryStats runtime.MemStats
 		runtime.ReadMemStats(&memoryStats)
 
-		stats.Gauge(fmt.Sprintf("Gostats.%s.Goroutines", profileName), int64(runtime.NumGoroutine()), 1.0)
+		stats.Gauge("Gostats.Goroutines", int64(runtime.NumGoroutine()), 1.0)
 
-		stats.Gauge(fmt.Sprintf("Gostats.%s.Heap.Objects", profileName), int64(memoryStats.HeapObjects), 1.0)
-		stats.Gauge(fmt.Sprintf("Gostats.%s.Heap.Idle", profileName), int64(memoryStats.HeapIdle), 1.0)
-		stats.Gauge(fmt.Sprintf("Gostats.%s.Heap.InUse", profileName), int64(memoryStats.HeapInuse), 1.0)
-		stats.Gauge(fmt.Sprintf("Gostats.%s.Heap.Released", profileName), int64(memoryStats.HeapReleased), 1.0)
+		stats.Gauge("Gostats.Heap.Objects", int64(memoryStats.HeapObjects), 1.0)
+		stats.Gauge("Gostats.Heap.Idle", int64(memoryStats.HeapIdle), 1.0)
+		stats.Gauge("Gostats.Heap.InUse", int64(memoryStats.HeapInuse), 1.0)
+		stats.Gauge("Gostats.Heap.Released", int64(memoryStats.HeapReleased), 1.0)
 
 		gcPauseAvg := int64(memoryStats.PauseTotalNs) / int64(len(memoryStats.PauseNs))
 
-		stats.Timing(fmt.Sprintf("Gostats.%s.Gc.PauseAvg", profileName), gcPauseAvg, 1.0)
-		stats.Gauge(fmt.Sprintf("Gostats.%s.Gc.NextAt", profileName), int64(memoryStats.NextGC), 1.0)
+		stats.Timing("Gostats.Gc.PauseAvg", gcPauseAvg, 1.0)
+		stats.Gauge("Gostats.Gc.NextAt", int64(memoryStats.NextGC), 1.0)
 
 		time.Sleep(time.Second)
 	}
+}
+
+func mysqlStats(SQL *sql.DB) (err error) {
+	var regs          int
+	var pending_authz int
+	var authz         int
+	var certs         int
+
+	err = SQL.QueryRow("SELECT count(*) FROM registrations").Scan(&regs)
+	if err != nil {
+		return
+	}
+	err = SQL.QueryRow("SELECT count(*) FROM pending_authz").Scan(&pending_authz)
+	if err != nil {
+		return
+	}
+	err = SQL.QueryRow("SELECT count(*) FROM authz").Scan(&authz)
+	if err != nil {
+		return
+	}
+	err = SQL.QueryRow("SELECT count(*) FROM certificates").Scan(&certs)
+	if err != nil {
+		return
+	}
+
+	fmt.Printf("SQL stats\n#########\n\n")
+	fmt.Printf("Registrations: %d\n", regs)
+	fmt.Printf("Pending authorizations: %d\n", pending_authz)
+	fmt.Printf("Authorizations: %d\n", authz)
+	fmt.Printf("Certificates: %d\n", certs)
+	return
 }
 
 var usage string = `wile-e-coyote [subcommand] --mysql MYSQLURI
@@ -309,6 +319,7 @@ Subcommands
 Global Options
     --mysql MYSQLURI    The MySQL URI for the boulder DB (incl. username/password e.g. 
     	                "username:password@tcp(127.0.0.1:3306)/boulder").
+	--statsd STATSDURI  The StatsD URI to send all the stuff we collect to.
 `
 
 func wecUsage() {
@@ -323,11 +334,23 @@ func main() {
 		log.Println("oh no statsd b0rkd")
 		stats, _ = statsd.NewNoopClient(nil)
 	}
-	go Profile("Wile-E-Coyote", stats)
+
+	go profile(stats)
 
 	if len(os.Args) < 2 {
 		wecUsage()
 	} else {
+		SQL, err := sql.Open(sqlDriver, sqlServer)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		err = mysqlStats(SQL)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Printf("Start time: %s\n", time.Now())
 		switch os.Args[1] {
 			case "hammer":
 				if len(os.Args[1:]) != 2 {
@@ -383,5 +406,11 @@ func main() {
 				}
 				ArithmeticRampUp(workerInc, finalWorkers, time.Duration(secInterval * 1000000000))
 		}
+		err = mysqlStats(SQL)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		fmt.Printf("End time: %s\n", time.Now())
 	}
 }

@@ -224,11 +224,14 @@ func NewAuthorizationTestChain() (ChainResult) {
 
 	// setup challenge stuffffff :>
 	for _, chall := range respAuth.Challenges {
+		var challField string
+		var challData  string
 		switch chall.Type {
 		case "simpleHttps":
 			SimpleHTTPSChalls[randomDomain] = chall.Token
 
-			chall.Path = "asdf"
+			challField = "path"
+			challData = "nop"
 		case "dvsni":
 			S := sha256.Sum256([]byte(randomDomain))
 			R, _ := core.B64dec(chall.R)
@@ -237,23 +240,29 @@ func NewAuthorizationTestChain() (ChainResult) {
 
 			DvsniChalls[chall.Nonce] = DvsniChall{Z: Z, Domain: randomDomain}
 
-			chall.S = core.B64enc(S[:])
+			challField = "s"
+			challData = core.B64enc(S[:])
+		default:
+			fmt.Printf("unsupported challenge type: %s\n", chall.Type)
+			
+			cR.Successful = false
+			cR.Took = time.Since(chainStart)
+			return cR
 		}
 
 		// send updated chall object!
-		challJson, _ := json.Marshal(chall)
+		challJson := fmt.Sprintf("{\"type\":\"%s\",\"%s\":\"%s\"}", chall.Type, challField, challData)
 		payload = []byte(challJson)
 		jws, _ = jose.Sign(alg, TheKey, payload)
 
 		// send a timed POST request
 		challUri := url.URL(chall.URI)
-		fmt.Println(challUri.String(), chall.Type)
 		body, status, _, timing, err := timedPOST(client, challUri.String(), requestPayload)
 		if err != nil {
 			// something
 		}
 		var updateResult requestResult
-		updateResult.Uri = "/acme/authz/update-challenge"
+		updateResult.Uri = "/acme/authz/update-challenge-"+chall.Type
 		updateResult.Took = timing
 		if status != 202 {
 			// baddy

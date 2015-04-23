@@ -42,7 +42,7 @@ type testChain struct {
 
 var TestChains []testChain = []testChain{
 	testChain{TestFunc: NewRegistrationTestChain},
-	testChain{TestFunc: NewAuthorizationTestChain},
+	// testChain{TestFunc: NewAuthorizationTestChain},
 	// testChain{TestFunc: NewCertificateTestChain},
 	// testChain{TestFunc: RevokeCertificateTestChain},
 }

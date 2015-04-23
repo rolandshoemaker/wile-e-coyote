@@ -39,7 +39,7 @@
 
 ## Design
 
-Go based context-aware highly concurrent load testing framework for the [`boulder`](https://github.com/letsencrypt/boulder) CA server infrastructure.
+Go based context-aware highly concurrent load testing framework for the [`boulder`](https://github.com/letsencrypt/boulder) CA server software.
 
 The aim of `wile-e-coyote` is to throughly test `boulder` in a way that will mimic real life user interation with the service via the `WFE`. To accomplish this it executes various test chains in individual goroutines that each mimic a specific set of user actions. The number of goroutines executing these test chains can be controlled by the various test modes the `wile-e-coyote` binary provides.
 
@@ -66,7 +66,7 @@ Global Options
     	                "username:password@tcp(127.0.0.1:3306)/boulder").
 ```
 
-The only state `wile-e-coyote` stores itself is information about `simpleHttps` and `Dvsni` challenges, the rest of the stuff it needs, information about authorizations and certificates and such, is taken directly from the MySQL database that `boulder` uses as its backing store which be extremely quick should (as long as we don't hit the preformance threshold of MySQL which, you know, shouldn't happen...).
+The only state `wile-e-coyote` stores itself is information about `simpleHttps` and `Dvsni` challenges that needs to be passed between the `attacker`s and the `challenge server`, the rest of the stuff it needs, information about authorizations and certificates and such, is taken directly from the MySQL database that `boulder` uses as its backing store which should be extremely quick (as long as we don't hit the preformance threshold of MySQL which, you know, shouldn't happen...).
 
 ### Modes
 
@@ -86,7 +86,7 @@ The only state `wile-e-coyote` stores itself is information about `simpleHttps` 
 
 `wile-e-coyote` sends the metrics that it collects during test chains to StatsD in seperate goroutines, because StatsD it's pretty awesome, and reduces the time that `wile-e-coyote` spends not-actually-load-testing by outsourcing the collection, averaging, etc of the metrics. Something like `Graphite`+`Grafana` can then be used to visualize the collected stuff (just like `boulder` can!)
 
-### StatsD metrics collected
+### StatsD metrics provided
 
 ```
 counters
@@ -115,4 +115,4 @@ timings
 
 ```
 
-A bunch of Go profiling metrics (memory usage, number of goroutines, etc etc etc) under `Gostats.Wile-E-Coyote.` for `wile-e-coyote` itself (not `boulder`) are also collected.
+A bunch of Go profiling metrics (memory usage, number of goroutines, etc etc etc) are also collected under `Gostats.Wile-E-Coyote.` for `wile-e-coyote` itself (not `boulder`).
